@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テトリス対戦</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="instructions">
+        <h3>操作方法</h3>
+        <div class="key-bindings">
+            <span class="key">←→</span> <span>左右移動</span>
+            <span class="key">↓</span> <span>下に移動</span>
+            <span class="key">↑</span> <span>回転</span>
+            <span class="key">C</span> <span>ホールド</span>
+            <span class="key">Space</span> <span>一気に落とす</span>
+        </div>
+    </div>
+    
+    <div class="game-container">
+        <div class="opponent-area">
+            <h3>対戦相手</h3>
+            <canvas id="opponent" width="120" height="200"></canvas>
+            <div>Score: <span id="opponent-score">0</span></div>
+        </div>
+        <div class="side-panel">
+            <div class="hold-box">
+                <div class="panel-label">HOLD</div>
+                <canvas id="hold" width="100" height="100"></canvas>
+            </div>
+        </div>
+        <canvas id="tetris" width="240" height="400"></canvas>
+        <div class="side-panel">
+            <div class="next-box">
+                <div class="panel-label">NEXT</div>
+                <canvas id="next" width="100" height="300"></canvas>
+            </div>
+            <div class="info">
+                <div>Score: <span id="score">0</span></div>
+                <div>Lines: <span id="lines">0</span></div>
+                <div>Level: <span id="level">1</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="btn-left" class="control-btn">←</button>
+        <button id="btn-rotate" class="control-btn">↻</button>
+        <button id="btn-hold" class="control-btn">H</button>
+        <button id="btn-harddrop" class="control-btn">⤓</button>
+        <button id="btn-right" class="control-btn">→</button>
+        <button id="btn-down" class="control-btn">↓</button>
+    </div>
+
+    <div class="match-controls">
+        <button id="find-match" class="match-btn">対戦相手を探す</button>
+        <div id="match-status"></div>
+    </div>
+
+    <div class="room-management">
+        <h3>テトリス対戦ルーム</h3>
+        <form id="create-room-form" class="create-room">
+            <input type="text" id="room-name" placeholder="ルーム名" required>
+            <button type="submit">ルームを作成</button>
+        </form>
+        <div class="room-list-container">
+            <h4>参加可能なルーム</h4>
+            <div id="room-list"></div>
+        </div>
+        <div id="match-status"></div>
+    </div>
+    
+    <script src="online.js"></script>
+    <script src="tetris.js"></script>
+</body>
+</html>
