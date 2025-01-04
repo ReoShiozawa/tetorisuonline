@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テトリス - ロビー</title>
+    <style>
+        .room-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .room {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .room.full { background: #f0f0f0; }
+        .room-status {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .join-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .join-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status-message {
+            text-align: center;
+            color: #666;
+            margin: 10px 0;
+        }
+        .refresh-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>テトリス オンライン ロビー</h1>
+    <div class="status-message" id="statusMessage"></div>
+    <button class="refresh-btn" onclick="refreshRooms()">更新</button>
+    <div class="room-list" id="roomList"></div>
+
+    <script>
+        // WebSocket接続URLを動的に設定
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsHost = window.location.hostname;
+        const wsPort = window.location.port || '8080';
+        const ws = new WebSocket(`${wsProtocol}//${wsHost}:${wsPort}`);
+        const statusMessage = document.getElementById('statusMessage');
+        
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        function connectWebSocket() {
+            ws.onopen = () => {
+                statusMessage.textContent = '接続しました';
+                reconnectAttempts = 0;
+                refreshRooms();
+            };
+
+            ws.onclose = () => {
+                statusMessage.textContent = 'サーバーとの接続が切断されました';
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    statusMessage.textContent = `再接続を試みています... (${reconnectAttempts}/${maxReconnectAttempts})`;
+                    setTimeout(connectWebSocket, 3000);
+                } else {
+                    statusMessage.textContent = '接続できませんでした。ページを更新してください。';
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket Error:', error);
+                statusMessage.textContent = '接続エラーが発生しました';
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                switch (data.type) {
+                    case 'roomList':
+                        updateRoomList(data.rooms);
+                        break;
+                    case 'joinSuccess':
+                        statusMessage.textContent = 'ルームに参加しました。ゲームページに移動します...';
+                        setTimeout(() => {
+                            window.location.href = `/game.html?roomId=${data.roomId}`;
+                        }, 1000);
+                        break;
+                    case 'joinError':
+                        statusMessage.textContent = data.message;
+                        break;
+                }
+            };
+        }
+
+        connectWebSocket();
+
+        function refreshRooms() {
+            statusMessage.textContent = 'ルーム一覧を更新中...';
+            ws.send(JSON.stringify({ type: 'getRooms' }));
+        }
+
+        function updateRoomList(rooms) {
+            const roomList = document.getElementById('roomList');
+            if (rooms.length === 0) {
+                roomList.innerHTML = '<div class="status-message">利用可能なルームがありません</div>';
+                return;
+            }
+
+            roomList.innerHTML = rooms.map(room => `
+                <div class="room ${room.isFull ? 'full' : ''}">
+                    <h3>ルーム ${room.id}</h3>
+                    <div class="room-status">
+                        プレイヤー: ${room.playerCount}/2
+                        <br>
+                        状態: ${room.status === 'waiting' ? '待機中' : 'ゲーム中'}
+                    </div>
+                    <button 
+                        class="join-btn" 
+                        onclick="joinRoom('${room.id}')"
+                        ${room.isFull ? 'disabled' : ''}>
+                        ${room.isFull ? '満員' : '参加する'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function joinRoom(roomId) {
+            statusMessage.textContent = 'ルームに参加しています...';
+            ws.send(JSON.stringify({ type: 'joinRoom', roomId }));
+        }
+
+        // 30秒ごとに自動更新
+        setInterval(refreshRooms, 30000);
+    </script>
+</body>
+</html>
